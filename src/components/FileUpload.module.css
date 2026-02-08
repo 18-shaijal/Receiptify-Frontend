@@ -1,0 +1,153 @@
+.dropzone {
+    border: 3px dashed var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    background: var(--bg-secondary);
+    position: relative;
+    overflow: hidden;
+}
+
+.dropzone::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.dropzone:hover::before,
+.dropzoneActive::before {
+    opacity: 1;
+}
+
+.dropzone:hover {
+    border-color: var(--primary);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.dropzoneActive {
+    border-color: var(--primary);
+    background: var(--bg-tertiary);
+    transform: scale(1.02);
+}
+
+.dropzoneIcon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--primary-light);
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.dropzoneText {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.dropzoneSubtext {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.dropzoneSubtext code {
+    background: var(--bg-tertiary);
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--radius-sm);
+    color: var(--primary-light);
+    font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.fileInfo {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fileDetails {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.fileIcon {
+    font-size: 2rem;
+    color: var(--success);
+}
+
+.fileName {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.fileSize {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.removeButton {
+    padding: 0.5rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--danger);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+    font-size: 1.25rem;
+}
+
+.removeButton:hover {
+    background: rgba(239, 68, 68, 0.1);
+    transform: scale(1.1);
+}
+
+.error {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-md);
+    color: var(--danger);
+    font-size: 0.875rem;
+}
