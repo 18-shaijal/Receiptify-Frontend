@@ -117,13 +117,12 @@ export default function Home() {
                 sessionId
             });
 
-            const { sessionId: sid, previewPath, previewData: pData } = response.data.data;
+            const { sessionId: sid, previewUrl, previewData: pData } = response.data.data;
             setPreviewData(pData);
             setSessionId(sid);
 
-            // Download preview
-            const filename = previewPath.split('/').pop();
-            // window.open(`${API_BASE}/download/${sid}/${filename}`, '_blank');
+            // Optional: Auto-download preview if you want, but better to just show notification
+            // window.open(previewUrl, '_blank');
 
             showNotification('Preview ready! Review the receipt below.', 'success');
             setCurrentStep('generate');
@@ -138,13 +137,34 @@ export default function Home() {
         }
     };
 
+    const [selectedFormats, setSelectedFormats] = useState<string[]>(['.docx', '.pdf']);
+    const [fileNamePattern, setFileNamePattern] = useState<string>('Receipt_{{STUDENT_NAME}}');
+
+    const handleFormatToggle = (format: string) => {
+        setSelectedFormats(prev =>
+            prev.includes(format)
+                ? prev.filter(f => f !== format)
+                : [...prev, format]
+        );
+    };
+
+    const handleInsertPlaceholder = (placeholder: string) => {
+        setFileNamePattern(prev => `${prev}{{${placeholder}}}`);
+    };
+
     const handleGenerate = async () => {
+        if (selectedFormats.length === 0) {
+            showNotification('Please select at least one format', 'warning');
+            return;
+        }
         setGenerating(true);
         setGenerationProgress({ current: 0, total: rowCount });
 
         try {
             const response = await axios.post(`${API_BASE}/generate`, {
-                sessionId
+                sessionId,
+                formats: selectedFormats,
+                fileNamePattern: fileNamePattern
             });
 
             const data = response.data.data;
@@ -289,6 +309,40 @@ export default function Home() {
                             </p>
                         </div>
 
+                        <div className="mb-4">
+                            <h3 className="mb-2" style={{ fontSize: '1rem' }}>📂 Filename Pattern</h3>
+                            <p className="text-muted mb-2" style={{ fontSize: '0.875rem' }}>
+                                Use <code>{`{{PLACEHOLDER}}`}</code> to name your files dynamically.
+                            </p>
+                            <input
+                                type="text"
+                                className="input mb-2"
+                                value={fileNamePattern}
+                                onChange={(e) => setFileNamePattern(e.target.value)}
+                                placeholder="e.g. Receipt_{{STUDENT_NAME}}"
+                                style={{ width: '100%', fontSize: '1rem', padding: '0.75rem' }}
+                            />
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                {excelHeaders.map(header => (
+                                    <button
+                                        key={header}
+                                        onClick={() => handleInsertPlaceholder(header)}
+                                        className="card-interactive"
+                                        style={{
+                                            padding: '0.25rem 0.75rem',
+                                            fontSize: '0.75rem',
+                                            borderRadius: '20px',
+                                            cursor: 'pointer',
+                                            background: 'var(--glass-bg)',
+                                            border: '1px solid var(--glass-border)'
+                                        }}
+                                    >
+                                        + {header}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         {previewData && (
                             <ReceiptPreview
                                 data={previewData}
@@ -300,6 +354,36 @@ export default function Home() {
                             This will create documents in both DOCX and ODT formats for all {rowCount} rows in your Excel file.
                         </p>
 
+                        <div className="mb-4">
+                            <h3 className="mb-2" style={{ fontSize: '1rem' }}>📦 Select Download Formats</h3>
+                            <div className="grid grid-cols-3 gap-3">
+                                {[
+                                    { id: '.docx', label: 'Word (.docx)', icon: '📝' },
+                                    { id: '.pdf', label: 'PDF (.pdf)', icon: '📕' },
+                                    { id: '.odt', label: 'OpenDoc (.odt)', icon: '📄' }
+                                ].map(format => (
+                                    <label
+                                        key={format.id}
+                                        className={`card-interactive p-3 text-center transition-all ${selectedFormats.includes(format.id) ? 'border-primary' : 'opacity-70'}`}
+                                        style={{
+                                            cursor: 'pointer',
+                                            border: selectedFormats.includes(format.id) ? '2px solid var(--primary)' : '1px solid var(--glass-border)',
+                                            background: selectedFormats.includes(format.id) ? 'rgba(var(--primary-rgb), 0.1)' : 'var(--glass-bg)'
+                                        }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedFormats.includes(format.id)}
+                                            onChange={() => handleFormatToggle(format.id)}
+                                            className="hidden"
+                                        />
+                                        <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>{format.icon}</div>
+                                        <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{format.label}</div>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             <button
                                 onClick={handleReset}
@@ -309,10 +393,11 @@ export default function Home() {
                             </button>
                             <button
                                 onClick={handleGenerate}
+                                disabled={selectedFormats.length === 0}
                                 className="button button-primary"
                                 style={{ flex: 1 }}
                             >
-                                Generate All Documents
+                                Generate All Documents ({selectedFormats.length} formats)
                             </button>
                         </div>
                     </div>
