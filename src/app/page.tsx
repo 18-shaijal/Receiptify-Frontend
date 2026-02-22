@@ -51,6 +51,23 @@ export default function Home() {
         setNotification({ message, type });
     };
 
+    const extractErrorMessage = (err: any): string => {
+        // Try common axios shapes first
+        const respErr = err?.response?.data?.error;
+        if (typeof respErr === 'string') return respErr;
+        if (typeof respErr === 'object' && respErr !== null) {
+            return respErr.message || JSON.stringify(respErr);
+        }
+
+        // Try other common error shapes
+        if (err?.message) return err.message;
+        try {
+            return JSON.stringify(err);
+        } catch (e) {
+            return 'An unknown error occurred';
+        }
+    };
+
     const uploadFile = async (file: File, endpoint: string, currentSessionId?: string): Promise<string> => {
         const formData = new FormData();
         formData.append(endpoint === 'template' ? 'template' : 'excel', file);
@@ -102,7 +119,7 @@ export default function Home() {
         } catch (error: any) {
             console.error('Validation error:', error);
             showNotification(
-                error.response?.data?.error || 'Failed to validate files',
+                extractErrorMessage(error) || 'Failed to validate files',
                 'error'
             );
         } finally {
@@ -129,7 +146,7 @@ export default function Home() {
         } catch (error: any) {
             console.error('Preview error:', error);
             showNotification(
-                error.response?.data?.error || 'Failed to generate preview',
+                extractErrorMessage(error) || 'Failed to generate preview',
                 'error'
             );
         } finally {
@@ -187,7 +204,7 @@ export default function Home() {
             console.error('Generation error:', error);
             setGenerating(false);
             showNotification(
-                error.response?.data?.error || 'Failed to generate documents',
+                extractErrorMessage(error) || 'Failed to generate documents',
                 'error'
             );
         }
