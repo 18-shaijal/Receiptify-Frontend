@@ -8,8 +8,9 @@ import ProgressIndicator from '@/components/ProgressIndicator';
 import DownloadOptions from '@/components/DownloadOptions';
 import Notification from '@/components/Notification';
 import ReceiptPreview from '@/components/ReceiptPreview';
+import EmailConfig from '@/components/EmailConfig';
 
-type Step = 'upload' | 'validate' | 'preview' | 'generate' | 'download';
+type Step = 'upload' | 'validate' | 'preview' | 'generate' | 'download' | 'email';
 
 interface ValidationResult {
     valid: boolean;
@@ -23,7 +24,9 @@ interface NotificationState {
     type: 'success' | 'error' | 'warning';
 }
 
-const API_BASE = `${process.env.NEXT_PUBLIC_API_URL}/api`;
+const API_BASE = process.env.NEXT_PUBLIC_API_URL
+    ? `${process.env.NEXT_PUBLIC_API_URL}/api`
+    : 'http://localhost:5002/api';
 
 export default function Home() {
     const [currentStep, setCurrentStep] = useState<Step>('upload');
@@ -46,6 +49,14 @@ export default function Home() {
 
     const [notification, setNotification] = useState<NotificationState | null>(null);
     const [loading, setLoading] = useState(false);
+
+    // Email state
+    const [emailColumn, setEmailColumn] = useState<string>('');
+    const [emailSubject, setEmailSubject] = useState<string>('');
+    const [emailBody, setEmailBody] = useState<string>('');
+    const [emailSending, setEmailSending] = useState(false);
+    const [emailSendProgress, setEmailSendProgress] = useState({ current: 0, total: 0 });
+    const [emailResults, setEmailResults] = useState<{ totalSent: number; totalFailed: number; results: any[] } | null>(null);
 
     const showNotification = (message: string, type: 'success' | 'error' | 'warning') => {
         setNotification({ message, type });
@@ -227,6 +238,47 @@ export default function Home() {
         showNotification('Downloading ZIP archive...', 'success');
     };
 
+    const handleSendEmails = async () => {
+        if (!emailColumn || !emailSubject) {
+            showNotification('Please select an email column and enter a subject', 'warning');
+            return;
+        }
+
+        setEmailSending(true);
+        setEmailSendProgress({ current: 0, total: rowCount });
+        setEmailResults(null);
+
+        try {
+            const response = await axios.post(`${API_BASE}/send-emails`, {
+                sessionId,
+                emailColumn,
+                emailSubject,
+                emailBody,
+            });
+
+            const data = response.data.data;
+            setEmailResults(data);
+            setEmailSendProgress({ current: data.totalSent + data.totalFailed, total: rowCount });
+
+            if (data.totalFailed === 0) {
+                showNotification(`All ${data.totalSent} emails sent successfully!`, 'success');
+            } else {
+                showNotification(
+                    `${data.totalSent} sent, ${data.totalFailed} failed`,
+                    'warning'
+                );
+            }
+        } catch (error: any) {
+            console.error('Email sending error:', error);
+            showNotification(
+                extractErrorMessage(error) || 'Failed to send emails',
+                'error'
+            );
+        } finally {
+            setEmailSending(false);
+        }
+    };
+
     const handleReset = () => {
         setCurrentStep('upload');
         setTemplateFile(null);
@@ -239,6 +291,10 @@ export default function Home() {
         setValidation(null);
         setSessionId('');
         setFilesGenerated(0);
+        setEmailColumn('');
+        setEmailSubject('');
+        setEmailBody('');
+        setEmailResults(null);
     };
 
     return (
@@ -429,11 +485,47 @@ export default function Home() {
                 )}
 
                 {currentStep === 'download' && (
-                    <DownloadOptions
-                        sessionId={sessionId}
-                        filesGenerated={filesGenerated}
-                        onDownloadZip={handleDownloadZip}
-                        onReset={handleReset}
+                    <>
+                        <DownloadOptions
+                            sessionId={sessionId}
+                            filesGenerated={filesGenerated}
+                            onDownloadZip={handleDownloadZip}
+                            onReset={handleReset}
+                        />
+                        <div className="card fade-in mt-4" style={{ textAlign: 'center' }}>
+                            <h3 className="mb-2">📧 Want to email documents to recipients?</h3>
+                            <p className="text-muted mb-3" style={{ fontSize: '0.9rem' }}>
+                                Send each generated document directly to the recipient's email address from your Excel data.
+                            </p>
+                            <button
+                                onClick={() => {
+                                    setEmailResults(null);
+                                    setCurrentStep('email');
+                                }}
+                                className="button button-secondary"
+                                style={{ width: '100%' }}
+                            >
+                                📧 Send via Email
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                {currentStep === 'email' && (
+                    <EmailConfig
+                        excelHeaders={excelHeaders}
+                        rowCount={rowCount}
+                        emailColumn={emailColumn}
+                        setEmailColumn={setEmailColumn}
+                        emailSubject={emailSubject}
+                        setEmailSubject={setEmailSubject}
+                        emailBody={emailBody}
+                        setEmailBody={setEmailBody}
+                        onSend={handleSendEmails}
+                        onCancel={() => setCurrentStep('download')}
+                        sending={emailSending}
+                        sendProgress={emailSendProgress}
+                        results={emailResults}
                     />
                 )}
 
