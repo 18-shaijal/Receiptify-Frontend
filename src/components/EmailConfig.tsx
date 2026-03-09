@@ -20,6 +20,7 @@ interface EmailConfigProps {
     setEmailBody: (val: string) => void;
     onSend: () => void;
     onCancel: () => void;
+    onStop?: () => void;
     sending: boolean;
     sendProgress: { current: number; total: number };
     results: { totalSent: number; totalFailed: number; results: EmailResult[] } | null;
@@ -36,6 +37,7 @@ export default function EmailConfig({
     setEmailBody,
     onSend,
     onCancel,
+    onStop,
     sending,
     sendProgress,
     results,
@@ -214,6 +216,15 @@ export default function EmailConfig({
                             >
                                 Sending email {sendProgress.current} of {sendProgress.total}…
                             </p>
+                            {onStop && (
+                                <button
+                                    onClick={onStop}
+                                    className="button button-danger mt-3"
+                                    style={{ width: '100%', background: 'var(--danger)', color: 'white' }}
+                                >
+                                    🚫 Stop Sending
+                                </button>
+                            )}
                         </div>
                     )}
                 </>
@@ -255,8 +266,8 @@ export default function EmailConfig({
                                         <td>
                                             <span
                                                 className={`badge ${r.status === 'sent'
-                                                        ? 'badge-success'
-                                                        : 'badge-danger'
+                                                    ? 'badge-success'
+                                                    : 'badge-danger'
                                                     }`}
                                             >
                                                 {r.status === 'sent' ? '✓ Sent' : '✗ Failed'}

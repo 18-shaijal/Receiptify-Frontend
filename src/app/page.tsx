@@ -42,6 +42,8 @@ export default function Home() {
 
     const [generating, setGenerating] = useState(false);
     const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
+    const [previousEmailStep, setPreviousEmailStep] = useState<'generate' | 'download'>('generate');
+
 
     const [sessionId, setSessionId] = useState<string>('');
     const [filesGenerated, setFilesGenerated] = useState<number>(0);
@@ -254,6 +256,8 @@ export default function Home() {
                 emailColumn,
                 emailSubject,
                 emailBody,
+                fileNamePattern,
+                formats: selectedFormats,
             });
 
             const data = response.data.data;
@@ -276,6 +280,16 @@ export default function Home() {
             );
         } finally {
             setEmailSending(false);
+        }
+    };
+
+    const handleCancelEmails = async () => {
+        try {
+            await axios.post(`${API_BASE}/cancel-emails`, { sessionId });
+            showNotification('Stop signal sent. Finishing current email...', 'warning');
+        } catch (error: any) {
+            console.error('Cancel error:', error);
+            showNotification('Failed to send stop signal', 'error');
         }
     };
 
@@ -457,21 +471,37 @@ export default function Home() {
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '1rem' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
                             <button
                                 onClick={handleReset}
                                 className="button button-outline"
+                                style={{ flex: '1 1 100%' }}
                             >
                                 Cancel
                             </button>
-                            <button
-                                onClick={handleGenerate}
-                                disabled={selectedFormats.length === 0}
-                                className="button button-primary"
-                                style={{ flex: 1 }}
-                            >
-                                Generate All Documents ({selectedFormats.length} formats)
-                            </button>
+                            <div className="grid grid-cols-2" style={{ gap: '1rem', width: '100%' }}>
+                                <button
+                                    onClick={handleGenerate}
+                                    disabled={selectedFormats.length === 0}
+                                    className="button button-primary"
+                                    style={{ display: 'flex', flexDirection: 'column', height: 'auto', padding: '1rem' }}
+                                >
+                                    <span style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>📦</span>
+                                    <span>Generate ZIP ({selectedFormats.length} formats)</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setPreviousEmailStep('generate');
+                                        setEmailResults(null);
+                                        setCurrentStep('email');
+                                    }}
+                                    className="button button-secondary"
+                                    style={{ display: 'flex', flexDirection: 'column', height: 'auto', padding: '1rem' }}
+                                >
+                                    <span style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>📧</span>
+                                    <span>Send Emails Directly</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -499,6 +529,7 @@ export default function Home() {
                             </p>
                             <button
                                 onClick={() => {
+                                    setPreviousEmailStep('download');
                                     setEmailResults(null);
                                     setCurrentStep('email');
                                 }}
@@ -522,7 +553,8 @@ export default function Home() {
                         emailBody={emailBody}
                         setEmailBody={setEmailBody}
                         onSend={handleSendEmails}
-                        onCancel={() => setCurrentStep('download')}
+                        onCancel={() => setCurrentStep(previousEmailStep)}
+                        onStop={handleCancelEmails}
                         sending={emailSending}
                         sendProgress={emailSendProgress}
                         results={emailResults}
